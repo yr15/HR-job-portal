@@ -28,21 +28,21 @@ const MESSAGE_TEMPLATES: MessageTemplate[] = [
     label: "Shortlisted for Interview",
     subject: "You've been shortlisted!",
     prefix: "Hi,\n\nGreat news — we've reviewed your profile and would like to move forward.",
-    suffix: "\n\nOur team will follow up shortly to schedule next steps.\n\nBest regards",
+    suffix: "Our team will follow up shortly to schedule next steps.\n\nBest regards",
   },
   {
     id: "followup",
     label: "Application Follow-up",
     subject: "Following up on your application",
     prefix: "Hi,\n\nThank you for your interest in joining our team.",
-    suffix: "\n\nWe'll keep you posted on next steps.\n\nBest regards",
+    suffix: "We'll keep you posted on next steps.\n\nBest regards",
   },
   {
     id: "opportunity",
     label: "New Opportunity",
     subject: "A new opportunity you might like",
     prefix: "Hi,\n\nWe came across your profile and thought you'd be a great fit for a role we're hiring for.",
-    suffix: "\n\nLet us know if you'd like to learn more.\n\nBest regards",
+    suffix: "Let us know if you'd like to learn more.\n\nBest regards",
   },
 ];
 
@@ -319,7 +319,7 @@ function ComposeMessageModal({
 
           {template.suffix && (
             <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-              {template.suffix.trim()}
+              {template.suffix}
             </p>
           )}
 
