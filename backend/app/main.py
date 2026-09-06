@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.error_handlers import register_exception_handlers
-from app.routers import applications, auth, health, hr, jobs
+from app.routers import applications, auth, candidates, health, hr, jobs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,3 +36,4 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(hr.router, prefix="/api/v1")
 app.include_router(applications.router, prefix="/api/v1")
+app.include_router(candidates.router, prefix="/api/v1")
