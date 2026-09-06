@@ -74,7 +74,7 @@ export function JobForm({ initialJob, onSubmit, submitLabel }: JobFormProps) {
         />
       </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="Location" htmlFor="location">
           <input id="location" required className={inputClass} value={location} onChange={(e) => setLocation(e.target.value)} />
         </FormField>
@@ -104,7 +104,7 @@ export function JobForm({ initialJob, onSubmit, submitLabel }: JobFormProps) {
         />
       </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="Min experience (years)" htmlFor="min_experience">
           <input
             id="min_experience"
@@ -131,7 +131,7 @@ export function JobForm({ initialJob, onSubmit, submitLabel }: JobFormProps) {
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="Salary min (optional)" htmlFor="salary_min">
           <input
             id="salary_min"

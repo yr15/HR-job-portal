@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { Pagination } from "../../components/Pagination";
 import { inputClass } from "../../components/FormField";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { CandidateListItem } from "../../types";
 
 export function CandidateDirectoryPage() {
@@ -20,17 +21,21 @@ export function CandidateDirectoryPage() {
   const [error, setError] = useState<string | null>(null);
   const pageSize = 10;
 
+  const debouncedQ = useDebouncedValue(q);
+  const debouncedLocation = useDebouncedValue(location);
+  const debouncedSkillsText = useDebouncedValue(skillsText);
+
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    const skills = skillsText
+    const skills = debouncedSkillsText
       .split(",")
       .map((skill) => skill.trim())
       .filter(Boolean);
 
     searchCandidates({
-      q: q || undefined,
-      location: location || undefined,
+      q: debouncedQ || undefined,
+      location: debouncedLocation || undefined,
       skills: skills.length > 0 ? skills : undefined,
       page,
       page_size: pageSize,
@@ -41,7 +46,7 @@ export function CandidateDirectoryPage() {
       })
       .catch((err) => setError(getErrorMessage(err, "Could not load candidates.")))
       .finally(() => setIsLoading(false));
-  }, [q, location, skillsText, page]);
+  }, [debouncedQ, debouncedLocation, debouncedSkillsText, page]);
 
   return (
     <div>

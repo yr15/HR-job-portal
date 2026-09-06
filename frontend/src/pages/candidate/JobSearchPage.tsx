@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { Pagination } from "../../components/Pagination";
 import { inputClass } from "../../components/FormField";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { EmploymentType, Job } from "../../types";
 
 const EMPLOYMENT_TYPES: EmploymentType[] = ["FULL_TIME", "PART_TIME", "CONTRACT", "INTERNSHIP"];
@@ -26,20 +27,25 @@ export function JobSearchPage() {
 
   const pageSize = 10;
 
+  const debouncedQ = useDebouncedValue(q);
+  const debouncedLocation = useDebouncedValue(location);
+  const debouncedSkillsText = useDebouncedValue(skillsText);
+  const debouncedExperienceYears = useDebouncedValue(experienceYears);
+
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    const skills = skillsText
+    const skills = debouncedSkillsText
       .split(",")
       .map((skill) => skill.trim())
       .filter(Boolean);
 
     searchJobs({
-      q: q || undefined,
-      location: location || undefined,
+      q: debouncedQ || undefined,
+      location: debouncedLocation || undefined,
       employment_type: employmentType || undefined,
       skills: skills.length > 0 ? skills : undefined,
-      experience_years: experienceYears ? Number(experienceYears) : undefined,
+      experience_years: debouncedExperienceYears ? Number(debouncedExperienceYears) : undefined,
       page,
       page_size: pageSize,
     })
@@ -50,7 +56,7 @@ export function JobSearchPage() {
       .catch((err) => setError(getErrorMessage(err, "Could not load jobs.")))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, location, employmentType, skillsText, experienceYears, page]);
+  }, [debouncedQ, debouncedLocation, employmentType, debouncedSkillsText, debouncedExperienceYears, page]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();

@@ -67,7 +67,8 @@ export function MyApplicationsPage() {
             description="Jobs you apply to will show up here with their current status."
           />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
@@ -106,6 +107,7 @@ export function MyApplicationsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
           </div>
         )}

@@ -75,7 +75,7 @@ export function ProfilePage() {
           />
         </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Phone" htmlFor="phone">
             <input id="phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </FormField>

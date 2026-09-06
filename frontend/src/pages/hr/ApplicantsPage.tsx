@@ -8,7 +8,9 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { Pagination } from "../../components/Pagination";
 import { StatusBadge } from "../../components/StatusBadge";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { inputClass } from "../../components/FormField";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Application, ApplicationStatus, Job } from "../../types";
 
 const STATUS_OPTIONS: ApplicationStatus[] = ["APPLIED", "SHORTLISTED", "REJECTED"];
@@ -24,7 +26,9 @@ export function ApplicantsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
   const pageSize = 10;
+  const debouncedQ = useDebouncedValue(q);
 
   useEffect(() => {
     if (!jobId) return;
@@ -35,7 +39,7 @@ export function ApplicantsPage() {
     if (!jobId) return;
     setIsLoading(true);
     setError(null);
-    getJobApplicants(jobId, { q: q || undefined, status: status || undefined, page, page_size: pageSize })
+    getJobApplicants(jobId, { q: debouncedQ || undefined, status: status || undefined, page, page_size: pageSize })
       .then((data) => {
         setApplicants(data.items);
         setTotal(data.total);
@@ -44,7 +48,7 @@ export function ApplicantsPage() {
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(load, [jobId, q, status, page]);
+  useEffect(load, [jobId, debouncedQ, status, page]);
 
   const handleStatusChange = async (applicationId: string, newStatus: "SHORTLISTED" | "REJECTED") => {
     setUpdatingId(applicationId);
@@ -58,6 +62,12 @@ export function ApplicantsPage() {
     }
   };
 
+  const confirmRejection = async () => {
+    if (!pendingRejection) return;
+    await handleStatusChange(pendingRejection.id, "REJECTED");
+    setPendingRejection(null);
+  };
+
   return (
     <div>
       <Link to="/hr/jobs" className="text-sm text-indigo-600 hover:text-indigo-500">
@@ -69,7 +79,7 @@ export function ApplicantsPage() {
         </h1>
       </div>
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <input
           className={inputClass}
           placeholder="Search by name or skill"
@@ -80,7 +90,7 @@ export function ApplicantsPage() {
           }}
         />
         <select
-          className={`${inputClass} w-48`}
+          className={`${inputClass} sm:w-48`}
           value={status}
           onChange={(e) => {
             setStatus(e.target.value as ApplicationStatus | "");
@@ -145,32 +155,44 @@ export function ApplicantsPage() {
                   </div>
                 </div>
 
-                {application.status === "APPLIED" && (
-                  <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                  {application.status !== "SHORTLISTED" && (
                     <button
                       type="button"
                       disabled={updatingId === application.id}
                       onClick={() => handleStatusChange(application.id, "SHORTLISTED")}
                       className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
                     >
-                      Shortlist
+                      {application.status === "REJECTED" ? "Reconsider — Shortlist" : "Shortlist"}
                     </button>
+                  )}
+                  {application.status !== "REJECTED" && (
                     <button
                       type="button"
                       disabled={updatingId === application.id}
-                      onClick={() => handleStatusChange(application.id, "REJECTED")}
+                      onClick={() => setPendingRejection(application)}
                       className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                     >
                       Reject
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
             <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingRejection !== null}
+        title="Reject this application?"
+        description={`${pendingRejection?.candidate.full_name} will be marked as rejected. You can still reconsider them later.`}
+        confirmLabel="Reject"
+        onConfirm={confirmRejection}
+        onCancel={() => setPendingRejection(null)}
+        isBusy={updatingId === pendingRejection?.id}
+      />
     </div>
   );
 }
