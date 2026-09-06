@@ -1,5 +1,14 @@
 from app.core.security import hash_password
-from app.models import CandidateProfile, EmploymentType, HRProfile, Job, User, UserRole
+from app.models import (
+    Application,
+    ApplicationStatus,
+    CandidateProfile,
+    EmploymentType,
+    HRProfile,
+    Job,
+    User,
+    UserRole,
+)
 
 
 def create_hr(db, *, email="factory-hr@test.com", password="Password123", company_name="Acme Inc", is_active=True):
@@ -18,17 +27,36 @@ def create_hr(db, *, email="factory-hr@test.com", password="Password123", compan
     return user
 
 
-def create_candidate(db, *, email="factory-candidate@test.com", password="Password123", is_active=True):
+def create_candidate(
+    db,
+    *,
+    email="factory-candidate@test.com",
+    password="Password123",
+    full_name="Factory Candidate",
+    is_active=True,
+    headline=None,
+    total_experience_years=None,
+    skills=None,
+    location=None,
+):
     user = User(
         email=email,
         password_hash=hash_password(password),
-        full_name="Factory Candidate",
+        full_name=full_name,
         role=UserRole.CANDIDATE,
         is_active=is_active,
     )
     db.add(user)
     db.flush()
-    db.add(CandidateProfile(user_id=user.id))
+    db.add(
+        CandidateProfile(
+            user_id=user.id,
+            headline=headline,
+            total_experience_years=total_experience_years,
+            skills=skills or [],
+            location=location,
+        )
+    )
     db.commit()
     db.refresh(user)
     return user
@@ -62,3 +90,16 @@ def create_job(
     db.commit()
     db.refresh(job)
     return job
+
+
+def create_application(db, *, job, candidate_user, status=None, cover_note=None):
+    application = Application(
+        job_id=job.id,
+        candidate_id=candidate_user.id,
+        status=status or ApplicationStatus.APPLIED,
+        cover_note=cover_note,
+    )
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
