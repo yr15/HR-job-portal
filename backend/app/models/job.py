@@ -38,3 +38,7 @@ class Job(Base, TimestampMixin):
 
     hr: Mapped["User"] = relationship(back_populates="jobs")
     applications: Mapped[list["Application"]] = relationship(back_populates="job")
+
+    @property
+    def company_name(self) -> str | None:
+        return self.hr.hr_profile.company_name if self.hr and self.hr.hr_profile else None
