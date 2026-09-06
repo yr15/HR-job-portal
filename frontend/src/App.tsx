@@ -1,41 +1,82 @@
-import axios from 'axios'
-import { useEffect, useState } from 'react'
-import { apiBaseUrl } from './api/client'
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import { Layout } from "./components/Layout";
+import { Spinner } from "./components/Spinner";
+import { ProtectedRoute, homePathForRole } from "./routes/ProtectedRoute";
+import { PublicRoute } from "./routes/PublicRoute";
+import { LoginPage } from "./pages/public/LoginPage";
+import { RegisterPage } from "./pages/public/RegisterPage";
+import { CandidateDashboardPage } from "./pages/candidate/CandidateDashboardPage";
+import { JobSearchPage } from "./pages/candidate/JobSearchPage";
+import { JobDetailsPage } from "./pages/candidate/JobDetailsPage";
+import { MyApplicationsPage } from "./pages/candidate/MyApplicationsPage";
+import { ProfilePage } from "./pages/candidate/ProfilePage";
+import { HRDashboardPage } from "./pages/hr/HRDashboardPage";
+import { MyJobsPage } from "./pages/hr/MyJobsPage";
+import { CreateJobPage } from "./pages/hr/CreateJobPage";
+import { EditJobPage } from "./pages/hr/EditJobPage";
+import { ApplicantsPage } from "./pages/hr/ApplicantsPage";
+import { CandidateDirectoryPage } from "./pages/hr/CandidateDirectoryPage";
+import { CandidateDetailPage } from "./pages/hr/CandidateDetailPage";
 
-type HealthStatus = 'checking' | 'ok' | 'error'
+function RootRedirect() {
+  const { user, isLoading } = useAuth();
 
-function App() {
-  const [status, setStatus] = useState<HealthStatus>('checking')
-
-  useEffect(() => {
-    axios
-      .get(`${apiBaseUrl}/health`)
-      .then(() => setStatus('ok'))
-      .catch(() => setStatus('error'))
-  }, [])
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">HireHub</h1>
-        <p className="mt-2 text-slate-500">Recruitment portal — under construction</p>
-        <p className="mt-4 text-sm">
-          Backend status:{' '}
-          <span
-            className={
-              status === 'ok'
-                ? 'font-medium text-emerald-600'
-                : status === 'error'
-                  ? 'font-medium text-red-600'
-                  : 'font-medium text-slate-400'
-            }
-          >
-            {status}
-          </span>
-        </p>
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner />
       </div>
-    </div>
-  )
+    );
+  }
+
+  return <Navigate to={user ? homePathForRole(user.role) : "/login"} replace />;
 }
 
-export default App
+function NotFoundPage() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-2 text-center">
+      <h1 className="text-2xl font-bold text-slate-900">Page not found</h1>
+      <p className="text-sm text-slate-500">The page you&apos;re looking for doesn&apos;t exist.</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRole="CANDIDATE" />}>
+        <Route element={<Layout />}>
+          <Route path="/candidate/dashboard" element={<CandidateDashboardPage />} />
+          <Route path="/candidate/jobs" element={<JobSearchPage />} />
+          <Route path="/candidate/jobs/:jobId" element={<JobDetailsPage />} />
+          <Route path="/candidate/applications" element={<MyApplicationsPage />} />
+          <Route path="/candidate/profile" element={<ProfilePage />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRole="HR" />}>
+        <Route element={<Layout />}>
+          <Route path="/hr/dashboard" element={<HRDashboardPage />} />
+          <Route path="/hr/jobs" element={<MyJobsPage />} />
+          <Route path="/hr/jobs/new" element={<CreateJobPage />} />
+          <Route path="/hr/jobs/:jobId/edit" element={<EditJobPage />} />
+          <Route path="/hr/jobs/:jobId/applicants" element={<ApplicantsPage />} />
+          <Route path="/hr/candidates" element={<CandidateDirectoryPage />} />
+          <Route path="/hr/candidates/:candidateId" element={<CandidateDetailPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
+
+export default App;
