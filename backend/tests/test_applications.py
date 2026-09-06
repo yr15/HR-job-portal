@@ -65,6 +65,15 @@ def test_hr_cannot_apply_to_job(client, db_session):
     assert response.status_code == 403
 
 
+def test_apply_without_authentication_returns_401(client, db_session):
+    hr_user = create_hr(db_session, email="hr-anonapply@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+
+    response = client.post(f"/api/v1/jobs/{job.id}/apply", json={})
+
+    assert response.status_code == 401
+
+
 def test_candidate_sees_only_own_applications(client, db_session):
     hr_user = create_hr(db_session, email="hr-myapps@test.com")
     candidate = create_candidate(db_session, email="cand-myapps@test.com")
@@ -105,6 +114,40 @@ def test_hr_sees_applicants_for_own_job(client, db_session):
     create_application(db_session, job=job, candidate_user=candidate)
 
     response = client.get(f"/api/v1/jobs/{job.id}/applications", headers=auth_header(hr_user))
+
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["candidate"]["full_name"] == "Alice Applicant"
+
+
+def test_hr_still_sees_applicants_after_deactivating_job(client, db_session):
+    hr_user = create_hr(db_session, email="hr-applicantsclosed@test.com")
+    candidate = create_candidate(db_session, email="cand-applicantclosed@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    create_application(db_session, job=job, candidate_user=candidate)
+
+    deactivate_response = client.patch(
+        f"/api/v1/jobs/{job.id}/status", json={"is_active": False}, headers=auth_header(hr_user)
+    )
+    assert deactivate_response.status_code == 200
+
+    response = client.get(f"/api/v1/jobs/{job.id}/applications", headers=auth_header(hr_user))
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+
+def test_hr_filters_applicants_by_candidate_name(client, db_session):
+    hr_user = create_hr(db_session, email="hr-applicantsearch@test.com")
+    alice = create_candidate(db_session, email="cand-alice@test.com", full_name="Alice Applicant")
+    bob = create_candidate(db_session, email="cand-bob@test.com", full_name="Bob Other")
+    job = create_job(db_session, hr_user=hr_user)
+    create_application(db_session, job=job, candidate_user=alice)
+    create_application(db_session, job=job, candidate_user=bob)
+
+    response = client.get(
+        f"/api/v1/jobs/{job.id}/applications", params={"q": "Alice"}, headers=auth_header(hr_user)
+    )
 
     body = response.json()
     assert body["total"] == 1

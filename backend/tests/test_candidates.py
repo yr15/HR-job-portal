@@ -27,6 +27,22 @@ def test_candidate_can_update_own_profile(client, db_session):
     assert profile["total_experience_years"] == 5
 
 
+def test_candidate_partial_update_preserves_other_fields(client, db_session):
+    candidate = create_candidate(
+        db_session, email="cand-partial@test.com", headline="Original Headline", location="Pune"
+    )
+
+    response = client.patch(
+        "/api/v1/candidates/me",
+        json={"headline": "Updated Headline"},
+        headers=auth_header(candidate),
+    )
+
+    profile = response.json()["candidate_profile"]
+    assert profile["headline"] == "Updated Headline"
+    assert profile["location"] == "Pune"
+
+
 def test_hr_cannot_access_candidate_me(client, db_session):
     hr_user = create_hr(db_session, email="hr-notme@test.com")
 
@@ -59,6 +75,25 @@ def test_hr_can_search_candidate_directory(client, db_session):
     body = response.json()
     names = [c["full_name"] for c in body["items"]]
     assert "Dana Directory" in names
+
+
+def test_hr_filters_directory_by_experience_range(client, db_session):
+    hr_user = create_hr(db_session, email="hr-directoryexp@test.com")
+    create_candidate(
+        db_session, email="cand-junior@test.com", full_name="Junior Candidate", total_experience_years=1
+    )
+    create_candidate(
+        db_session, email="cand-senior@test.com", full_name="Senior Candidate", total_experience_years=8
+    )
+
+    response = client.get(
+        "/api/v1/candidates",
+        params={"min_experience": 5, "max_experience": 10},
+        headers=auth_header(hr_user),
+    )
+
+    names = [c["full_name"] for c in response.json()["items"]]
+    assert names == ["Senior Candidate"]
     assert "Rae React" not in names
 
 

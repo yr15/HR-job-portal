@@ -1,3 +1,4 @@
+from app.models import EmploymentType
 from tests.conftest import auth_header
 from tests.factories import create_candidate, create_hr, create_job
 
@@ -41,6 +42,24 @@ def test_create_job_validation_error(client, db_session):
     assert response.status_code == 422
 
 
+def test_create_job_invalid_experience_range_returns_422(client, db_session):
+    hr_user = create_hr(db_session, email="hr-badexp@test.com")
+    bad_payload = {**VALID_JOB_PAYLOAD, "min_experience_years": 5, "max_experience_years": 2}
+
+    response = client.post("/api/v1/jobs", json=bad_payload, headers=auth_header(hr_user))
+
+    assert response.status_code == 422
+
+
+def test_create_job_invalid_salary_range_returns_422(client, db_session):
+    hr_user = create_hr(db_session, email="hr-badsalary@test.com")
+    bad_payload = {**VALID_JOB_PAYLOAD, "salary_min": 100000, "salary_max": 50000}
+
+    response = client.post("/api/v1/jobs", json=bad_payload, headers=auth_header(hr_user))
+
+    assert response.status_code == 422
+
+
 def test_search_returns_only_active_jobs(client, db_session):
     hr_user = create_hr(db_session, email="hr-search@test.com")
     create_job(db_session, hr_user=hr_user, title="Active Job A")
@@ -74,6 +93,39 @@ def test_search_filters_by_experience_years(client, db_session):
 
     titles = [job["title"] for job in response.json()["items"]]
     assert titles == ["Junior Role"]
+
+
+def test_search_filters_by_query_text(client, db_session):
+    hr_user = create_hr(db_session, email="hr-query@test.com")
+    create_job(db_session, hr_user=hr_user, title="Payments Backend Engineer")
+    create_job(db_session, hr_user=hr_user, title="Marketing Coordinator")
+
+    response = client.get("/api/v1/jobs", params={"q": "Payments"})
+
+    titles = [job["title"] for job in response.json()["items"]]
+    assert titles == ["Payments Backend Engineer"]
+
+
+def test_search_filters_by_location(client, db_session):
+    hr_user = create_hr(db_session, email="hr-location@test.com")
+    create_job(db_session, hr_user=hr_user, title="Bangalore Role", location="Bangalore")
+    create_job(db_session, hr_user=hr_user, title="Remote Role", location="Remote")
+
+    response = client.get("/api/v1/jobs", params={"location": "Bangalore"})
+
+    titles = [job["title"] for job in response.json()["items"]]
+    assert titles == ["Bangalore Role"]
+
+
+def test_search_filters_by_employment_type(client, db_session):
+    hr_user = create_hr(db_session, email="hr-emptype@test.com")
+    create_job(db_session, hr_user=hr_user, title="Full Time Role", employment_type=EmploymentType.FULL_TIME)
+    create_job(db_session, hr_user=hr_user, title="Contract Role", employment_type=EmploymentType.CONTRACT)
+
+    response = client.get("/api/v1/jobs", params={"employment_type": "CONTRACT"})
+
+    titles = [job["title"] for job in response.json()["items"]]
+    assert titles == ["Contract Role"]
 
 
 def test_search_pagination(client, db_session):
@@ -113,6 +165,17 @@ def test_job_detail_inactive_visible_to_owner(client, db_session):
     assert response.status_code == 200
 
 
+def test_job_detail_with_invalid_token_returns_401(client, db_session):
+    hr_user = create_hr(db_session, email="hr-badtoken@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+
+    response = client.get(
+        f"/api/v1/jobs/{job.id}", headers={"Authorization": "Bearer garbage-token"}
+    )
+
+    assert response.status_code == 401
+
+
 def test_update_job_by_owner_succeeds(client, db_session):
     hr_user = create_hr(db_session, email="hr-update@test.com")
     job = create_job(db_session, hr_user=hr_user, title="Old Title")
@@ -123,6 +186,31 @@ def test_update_job_by_owner_succeeds(client, db_session):
 
     assert response.status_code == 200
     assert response.json()["title"] == "New Title"
+
+
+def test_update_job_partial_update_preserves_other_fields(client, db_session):
+    hr_user = create_hr(db_session, email="hr-partial@test.com")
+    job = create_job(db_session, hr_user=hr_user, title="Original Title", location="Bangalore")
+
+    response = client.patch(
+        f"/api/v1/jobs/{job.id}", json={"title": "Updated Title"}, headers=auth_header(hr_user)
+    )
+
+    body = response.json()
+    assert body["title"] == "Updated Title"
+    assert body["location"] == "Bangalore"
+
+
+def test_update_job_invalid_experience_range_returns_400(client, db_session):
+    hr_user = create_hr(db_session, email="hr-updateexp@test.com")
+    job = create_job(db_session, hr_user=hr_user, min_experience_years=2, max_experience_years=5)
+
+    response = client.patch(
+        f"/api/v1/jobs/{job.id}", json={"max_experience_years": 1}, headers=auth_header(hr_user)
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_EXPERIENCE_RANGE"
 
 
 def test_update_job_by_non_owner_returns_403(client, db_session):
