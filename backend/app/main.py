@@ -6,7 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import health
+from app.core.error_handlers import register_exception_handlers
+from app.routers import auth, health
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,4 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+register_exception_handlers(app)
+
 app.include_router(health.router)
+app.include_router(auth.router, prefix="/api/v1")
