@@ -10,7 +10,7 @@ export interface CandidateProfile {
   total_experience_years: number | null;
   skills: string[];
   location: string | null;
-  resume_url: string | null;
+  resume_filename: string | null;
 }
 
 export interface HRProfile {
@@ -86,6 +86,16 @@ export interface CandidateStats {
   applied_count: number;
   shortlisted_count: number;
   rejected_count: number;
+}
+
+export interface Message {
+  id: string;
+  subject: string;
+  body: string;
+  sent_at: string;
+  read_at: string | null;
+  sender_name: string;
+  sender_company: string | null;
 }
 
 export interface ApiErrorBody {

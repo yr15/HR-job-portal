@@ -10,6 +10,7 @@ import { CandidateDashboardPage } from "./pages/candidate/CandidateDashboardPage
 import { JobSearchPage } from "./pages/candidate/JobSearchPage";
 import { JobDetailsPage } from "./pages/candidate/JobDetailsPage";
 import { MyApplicationsPage } from "./pages/candidate/MyApplicationsPage";
+import { InboxPage } from "./pages/candidate/InboxPage";
 import { ProfilePage } from "./pages/candidate/ProfilePage";
 import { HRDashboardPage } from "./pages/hr/HRDashboardPage";
 import { MyJobsPage } from "./pages/hr/MyJobsPage";
@@ -58,6 +59,7 @@ function App() {
           <Route path="/candidate/jobs" element={<JobSearchPage />} />
           <Route path="/candidate/jobs/:jobId" element={<JobDetailsPage />} />
           <Route path="/candidate/applications" element={<MyApplicationsPage />} />
+          <Route path="/candidate/inbox" element={<InboxPage />} />
           <Route path="/candidate/profile" element={<ProfilePage />} />
         </Route>
       </Route>

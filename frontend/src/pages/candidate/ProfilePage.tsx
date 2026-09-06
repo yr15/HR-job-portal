@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { updateMyProfile } from "../../api/candidates";
+import { getResumeBlobUrl, updateMyProfile, uploadResume } from "../../api/candidates";
 import { getErrorMessage } from "../../api/client";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { FormField, inputClass } from "../../components/FormField";
@@ -14,11 +14,15 @@ export function ProfilePage() {
   const [location, setLocation] = useState(profile?.location ?? "");
   const [experience, setExperience] = useState(profile?.total_experience_years?.toString() ?? "");
   const [skillsText, setSkillsText] = useState(profile?.skills.join(", ") ?? "");
-  const [resumeUrl, setResumeUrl] = useState(profile?.resume_url ?? "");
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isViewingResume, setIsViewingResume] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -35,7 +39,6 @@ export function ProfilePage() {
           .split(",")
           .map((skill) => skill.trim())
           .filter(Boolean),
-        resume_url: resumeUrl || null,
       });
       await refreshUser();
       setSuccess(true);
@@ -46,12 +49,80 @@ export function ProfilePage() {
     }
   };
 
+  const handleResumeSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setResumeError(null);
+    setIsUploadingResume(true);
+    try {
+      await uploadResume(file);
+      await refreshUser();
+    } catch (err) {
+      setResumeError(getErrorMessage(err, "Could not upload your resume."));
+    } finally {
+      setIsUploadingResume(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleViewResume = async () => {
+    if (!user) return;
+    setIsViewingResume(true);
+    setResumeError(null);
+    try {
+      const blobUrl = await getResumeBlobUrl(user.id);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setResumeError(getErrorMessage(err, "Could not open your resume."));
+    } finally {
+      setIsViewingResume(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-xl font-semibold text-slate-900">My Profile</h1>
       <p className="mt-1 text-sm text-slate-500">
         Keep this up to date — recruiters see it when you apply and when browsing the candidate directory.
       </p>
+
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-medium text-slate-700">Resume</h2>
+        {resumeError && (
+          <div className="mt-2">
+            <ErrorBanner message={resumeError} />
+          </div>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {profile?.resume_filename ? (
+            <>
+              <span className="text-sm text-slate-600">{profile.resume_filename}</span>
+              <button
+                type="button"
+                onClick={handleViewResume}
+                disabled={isViewingResume}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {isViewingResume ? "Opening…" : "View"}
+              </button>
+            </>
+          ) : (
+            <span className="text-sm text-slate-400">No resume uploaded yet.</span>
+          )}
+          <label className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 cursor-pointer">
+            {isUploadingResume ? "Uploading…" : profile?.resume_filename ? "Replace" : "Upload"}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              disabled={isUploadingResume}
+              onChange={handleResumeSelected}
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">PDF only, up to 5MB.</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         {error && <ErrorBanner message={error} />}
@@ -104,16 +175,6 @@ export function ProfilePage() {
             placeholder="Python, FastAPI, PostgreSQL"
             value={skillsText}
             onChange={(e) => setSkillsText(e.target.value)}
-          />
-        </FormField>
-
-        <FormField label="Resume link" htmlFor="resume_url">
-          <input
-            id="resume_url"
-            className={inputClass}
-            placeholder="https://drive.google.com/…"
-            value={resumeUrl}
-            onChange={(e) => setResumeUrl(e.target.value)}
           />
         </FormField>
 

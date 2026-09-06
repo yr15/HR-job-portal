@@ -28,6 +28,9 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - resume_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +59,7 @@ services:
 
 volumes:
   pgdata:
+  resume_uploads:
 
 networks:
   hirehub:

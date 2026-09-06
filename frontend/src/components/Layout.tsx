@@ -1,10 +1,13 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getUnreadMessageCount } from "../api/messages";
 
 const CANDIDATE_LINKS = [
   { to: "/candidate/dashboard", label: "Dashboard" },
   { to: "/candidate/jobs", label: "Find Jobs" },
   { to: "/candidate/applications", label: "My Applications" },
+  { to: "/candidate/inbox", label: "Inbox" },
   { to: "/candidate/profile", label: "Profile" },
 ];
 
@@ -17,7 +20,16 @@ const HR_LINKS = [
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
   const links = user?.role === "HR" ? HR_LINKS : CANDIDATE_LINKS;
+
+  useEffect(() => {
+    if (user?.role !== "CANDIDATE") return;
+    getUnreadMessageCount()
+      .then(setUnreadCount)
+      .catch(() => undefined);
+  }, [user?.role, location.pathname]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -31,12 +43,17 @@ export function Layout() {
                   key={link.to}
                   to={link.to}
                   className={({ isActive }) =>
-                    `rounded-md px-3 py-2 text-sm font-medium ${
+                    `flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ${
                       isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-100"
                     }`
                   }
                 >
                   {link.label}
+                  {link.to === "/candidate/inbox" && unreadCount > 0 && (
+                    <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </nav>
@@ -60,12 +77,17 @@ export function Layout() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
+                `flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
                   isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-600"
                 }`
               }
             >
               {link.label}
+              {link.to === "/candidate/inbox" && unreadCount > 0 && (
+                <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                  {unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
