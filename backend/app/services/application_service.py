@@ -162,3 +162,24 @@ def update_application_status(
     db.refresh(application)
     logger.info("Application %s status set to %s by HR %s", application.id, new_status.value, hr_user.id)
     return application
+
+
+def bulk_update_application_status(
+    db: Session, hr_user: User, application_ids: list[uuid.UUID], new_status: ApplicationStatus
+) -> int:
+    # Scoped to jobs owned by this HR — an id for someone else's applicant is
+    # silently excluded rather than failing the whole batch, same as bulk
+    # messaging's handling of invalid candidate_ids.
+    applications = (
+        _application_query(db)
+        .join(Job, Application.job_id == Job.id)
+        .filter(Application.id.in_(application_ids), Job.hr_id == hr_user.id)
+        .all()
+    )
+    for application in applications:
+        application.status = new_status
+    db.commit()
+    logger.info(
+        "HR %s bulk-updated %d applications to %s", hr_user.id, len(applications), new_status.value
+    )
+    return len(applications)

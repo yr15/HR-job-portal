@@ -25,6 +25,22 @@ class ApplicationStatusUpdateRequest(BaseModel):
         return value
 
 
+class BulkStatusUpdateRequest(BaseModel):
+    application_ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
+    status: ApplicationStatus
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_a_valid_transition(cls, value: ApplicationStatus) -> ApplicationStatus:
+        if value not in ALLOWED_STATUS_TRANSITIONS:
+            raise ValueError("status must be SHORTLISTED or REJECTED")
+        return value
+
+
+class BulkStatusUpdateResponse(BaseModel):
+    updated_count: int
+
+
 class ApplicationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

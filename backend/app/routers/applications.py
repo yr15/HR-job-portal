@@ -6,9 +6,15 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models import Application, ApplicationStatus, User, UserRole
-from app.schemas.application import ApplicationOut, ApplicationStatusUpdateRequest
+from app.schemas.application import (
+    ApplicationOut,
+    ApplicationStatusUpdateRequest,
+    BulkStatusUpdateRequest,
+    BulkStatusUpdateResponse,
+)
 from app.schemas.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.services.application_service import (
+    bulk_update_application_status,
     get_application_detail,
     list_my_applications,
     update_application_status,
@@ -30,6 +36,16 @@ def my_applications(
         db, candidate_user, status=status_filter, job_id=job_id, page=page, page_size=page_size
     )
     return Page(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.patch("/bulk-status", response_model=BulkStatusUpdateResponse)
+def bulk_update_status(
+    payload: BulkStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    hr_user: User = Depends(require_role(UserRole.HR)),
+) -> BulkStatusUpdateResponse:
+    updated_count = bulk_update_application_status(db, hr_user, payload.application_ids, payload.status)
+    return BulkStatusUpdateResponse(updated_count=updated_count)
 
 
 @router.get("/{application_id}", response_model=ApplicationOut)

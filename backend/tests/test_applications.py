@@ -349,6 +349,79 @@ def test_non_owner_hr_cannot_update_application_status(client, db_session):
     assert response.status_code == 403
 
 
+def test_hr_bulk_shortlists_multiple_applicants(client, db_session):
+    hr_user = create_hr(db_session, email="hr-bulkstatus@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    cand1 = create_candidate(db_session, email="cand-bulkstatus1@test.com")
+    cand2 = create_candidate(db_session, email="cand-bulkstatus2@test.com")
+    app1 = create_application(db_session, job=job, candidate_user=cand1)
+    app2 = create_application(db_session, job=job, candidate_user=cand2)
+
+    response = client.patch(
+        "/api/v1/applications/bulk-status",
+        json={"application_ids": [str(app1.id), str(app2.id)], "status": "SHORTLISTED"},
+        headers=auth_header(hr_user),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 2
+
+    detail1 = client.get(f"/api/v1/applications/{app1.id}", headers=auth_header(hr_user)).json()
+    detail2 = client.get(f"/api/v1/applications/{app2.id}", headers=auth_header(hr_user)).json()
+    assert detail1["status"] == "SHORTLISTED"
+    assert detail2["status"] == "SHORTLISTED"
+
+
+def test_hr_bulk_status_excludes_other_hrs_applications(client, db_session):
+    owner = create_hr(db_session, email="hr-bulkowner@test.com")
+    other = create_hr(db_session, email="hr-bulkother@test.com", company_name="Other Co")
+    candidate = create_candidate(db_session, email="cand-bulkexclude@test.com")
+    job = create_job(db_session, hr_user=owner)
+    application = create_application(db_session, job=job, candidate_user=candidate)
+
+    response = client.patch(
+        "/api/v1/applications/bulk-status",
+        json={"application_ids": [str(application.id)], "status": "REJECTED"},
+        headers=auth_header(other),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 0
+
+    detail = client.get(f"/api/v1/applications/{application.id}", headers=auth_header(owner)).json()
+    assert detail["status"] == "APPLIED"
+
+
+def test_candidate_cannot_bulk_update_status(client, db_session):
+    hr_user = create_hr(db_session, email="hr-bulknoaccess@test.com")
+    candidate = create_candidate(db_session, email="cand-bulknoaccess@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    application = create_application(db_session, job=job, candidate_user=candidate)
+
+    response = client.patch(
+        "/api/v1/applications/bulk-status",
+        json={"application_ids": [str(application.id)], "status": "SHORTLISTED"},
+        headers=auth_header(candidate),
+    )
+
+    assert response.status_code == 403
+
+
+def test_bulk_status_rejects_invalid_status_value(client, db_session):
+    hr_user = create_hr(db_session, email="hr-bulkbadstatus@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    candidate = create_candidate(db_session, email="cand-bulkbadstatus@test.com")
+    application = create_application(db_session, job=job, candidate_user=candidate)
+
+    response = client.patch(
+        "/api/v1/applications/bulk-status",
+        json={"application_ids": [str(application.id)], "status": "APPLIED"},
+        headers=auth_header(hr_user),
+    )
+
+    assert response.status_code == 422
+
+
 def test_status_update_rejects_applied_value(client, db_session):
     hr_user = create_hr(db_session, email="hr-badstatus@test.com")
     candidate = create_candidate(db_session, email="cand-badstatus@test.com")
