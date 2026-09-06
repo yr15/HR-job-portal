@@ -1,8 +1,23 @@
+import datetime
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Application, ApplicationStatus, Job, User
-from app.schemas.dashboard import CandidateStatsOut, DashboardStatsOut
+from app.schemas.dashboard import ApplicationsByDay, CandidateStatsOut, DashboardStatsOut
+
+TREND_DAYS = 14
+
+
+def _fill_trend_gaps(counts_by_date: dict[datetime.date, int]) -> list[ApplicationsByDay]:
+    today = datetime.datetime.now(datetime.timezone.utc).date()
+    start = today - datetime.timedelta(days=TREND_DAYS - 1)
+    days = []
+    current = start
+    while current <= today:
+        days.append(ApplicationsByDay(date=current, count=counts_by_date.get(current, 0)))
+        current += datetime.timedelta(days=1)
+    return days
 
 
 def get_hr_dashboard_stats(db: Session, hr_user: User) -> DashboardStatsOut:
@@ -23,6 +38,16 @@ def get_hr_dashboard_stats(db: Session, hr_user: User) -> DashboardStatsOut:
         .one()
     )
 
+    trend_start = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=TREND_DAYS - 1)
+    trend_rows = (
+        db.query(func.date(Application.applied_at), func.count(Application.id))
+        .join(Job, Application.job_id == Job.id)
+        .filter(Job.hr_id == hr_user.id, Application.applied_at >= trend_start)
+        .group_by(func.date(Application.applied_at))
+        .all()
+    )
+    counts_by_date = {date: count for date, count in trend_rows}
+
     return DashboardStatsOut(
         total_jobs=total_jobs,
         active_jobs=active_jobs,
@@ -30,6 +55,7 @@ def get_hr_dashboard_stats(db: Session, hr_user: User) -> DashboardStatsOut:
         applied_count=applied_count,
         shortlisted_count=shortlisted_count,
         rejected_count=rejected_count,
+        applications_by_day=_fill_trend_gaps(counts_by_date),
     )
 
 

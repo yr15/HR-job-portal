@@ -1,4 +1,11 @@
+import datetime
+
 from pydantic import BaseModel
+
+
+class ApplicationsByDay(BaseModel):
+    date: datetime.date
+    count: int
 
 
 class DashboardStatsOut(BaseModel):
@@ -8,6 +15,7 @@ class DashboardStatsOut(BaseModel):
     applied_count: int
     shortlisted_count: int
     rejected_count: int
+    applications_by_day: list[ApplicationsByDay]
 
 
 class CandidateStatsOut(BaseModel):

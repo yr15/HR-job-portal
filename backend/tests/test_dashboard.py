@@ -27,6 +27,11 @@ def test_dashboard_stats_scoped_to_own_jobs(client, db_session):
     assert body["shortlisted_count"] == 1
     assert body["applied_count"] == 0
 
+    trend = body["applications_by_day"]
+    assert len(trend) == 14
+    assert trend[-1]["count"] == 1
+    assert sum(day["count"] for day in trend) == 1
+
 
 def test_candidate_cannot_access_dashboard_stats(client, db_session):
     candidate = create_candidate(db_session, email="cand-nodash@test.com")
