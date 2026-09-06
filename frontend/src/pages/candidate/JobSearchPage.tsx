@@ -71,18 +71,27 @@ export function JobSearchPage() {
           className={inputClass}
           placeholder="Title or keyword"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
         />
         <input
           className={inputClass}
           placeholder="Location"
           value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          onChange={(e) => {
+            setLocation(e.target.value);
+            setPage(1);
+          }}
         />
         <select
           className={inputClass}
           value={employmentType}
-          onChange={(e) => setEmploymentType(e.target.value as EmploymentType | "")}
+          onChange={(e) => {
+            setEmploymentType(e.target.value as EmploymentType | "");
+            setPage(1);
+          }}
         >
           <option value="">Any employment type</option>
           {EMPLOYMENT_TYPES.map((type) => (
@@ -95,7 +104,10 @@ export function JobSearchPage() {
           className={inputClass}
           placeholder="Skills (comma-separated)"
           value={skillsText}
-          onChange={(e) => setSkillsText(e.target.value)}
+          onChange={(e) => {
+            setSkillsText(e.target.value);
+            setPage(1);
+          }}
         />
         <input
           className={inputClass}
@@ -105,7 +117,10 @@ export function JobSearchPage() {
           step={0.5}
           placeholder="Your years of experience"
           value={experienceYears}
-          onChange={(e) => setExperienceYears(e.target.value)}
+          onChange={(e) => {
+            setExperienceYears(e.target.value);
+            setPage(1);
+          }}
         />
         <button
           type="submit"
