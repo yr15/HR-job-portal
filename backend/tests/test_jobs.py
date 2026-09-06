@@ -60,6 +60,49 @@ def test_create_job_invalid_salary_range_returns_422(client, db_session):
     assert response.status_code == 422
 
 
+def test_create_job_whitespace_only_fields_returns_422(client, db_session):
+    hr_user = create_hr(db_session, email="hr-whitespace@test.com")
+    bad_payload = {
+        **VALID_JOB_PAYLOAD,
+        "title": "   ",
+        "description": " " * 25,
+        "location": "   ",
+    }
+
+    response = client.post("/api/v1/jobs", json=bad_payload, headers=auth_header(hr_user))
+
+    assert response.status_code == 422
+    fields = response.json()["error"]["fields"]
+    assert "title" in fields
+    assert "description" in fields
+    assert "location" in fields
+
+
+def test_create_job_trims_padded_whitespace(client, db_session):
+    hr_user = create_hr(db_session, email="hr-trim@test.com")
+    padded_payload = {
+        **VALID_JOB_PAYLOAD,
+        "title": "  Padded Title  ",
+        "location": "  Remote  ",
+    }
+
+    response = client.post("/api/v1/jobs", json=padded_payload, headers=auth_header(hr_user))
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["title"] == "Padded Title"
+    assert body["location"] == "Remote"
+
+
+def test_update_job_whitespace_only_title_returns_422(client, db_session):
+    hr_user = create_hr(db_session, email="hr-whitespace-update@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+
+    response = client.patch(f"/api/v1/jobs/{job.id}", json={"title": "   "}, headers=auth_header(hr_user))
+
+    assert response.status_code == 422
+
+
 def test_search_returns_only_active_jobs(client, db_session):
     hr_user = create_hr(db_session, email="hr-search@test.com")
     create_job(db_session, hr_user=hr_user, title="Active Job A")
