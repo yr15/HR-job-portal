@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getJob, getJobApplicants } from "../../api/jobs";
-import { updateApplicationStatus } from "../../api/applications";
+import { bulkUpdateApplicationStatus, updateApplicationStatus } from "../../api/applications";
 import { getErrorMessage } from "../../api/client";
 import { Spinner } from "../../components/Spinner";
 import { EmptyState } from "../../components/EmptyState";
@@ -34,6 +34,9 @@ export function ApplicantsPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActing, setIsBulkActing] = useState(false);
+  const [isPendingBulkReject, setIsPendingBulkReject] = useState(false);
   const pageSize = 10;
 
   const debouncedQ = useDebouncedValue(q);
@@ -119,15 +122,78 @@ export function ApplicantsPage() {
     setPendingRejection(null);
   };
 
+  const toggleSelected = (applicationId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(applicationId)) next.delete(applicationId);
+      else next.add(applicationId);
+      return next;
+    });
+  };
+
+  const allOnPageSelected = applicants.length > 0 && applicants.every((a) => selectedIds.has(a.id));
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) {
+        applicants.forEach((a) => next.delete(a.id));
+      } else {
+        applicants.forEach((a) => next.add(a.id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkStatusChange = async (newStatus: "SHORTLISTED" | "REJECTED") => {
+    setIsBulkActing(true);
+    setError(null);
+    try {
+      await bulkUpdateApplicationStatus(Array.from(selectedIds), newStatus);
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not update the selected applicants."));
+    } finally {
+      setIsBulkActing(false);
+    }
+  };
+
+  const confirmBulkReject = async () => {
+    await handleBulkStatusChange("REJECTED");
+    setIsPendingBulkReject(false);
+  };
+
   return (
     <div>
       <Link to="/hr/jobs" className="text-sm text-indigo-600 hover:text-indigo-500">
         &larr; Back to my jobs
       </Link>
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-900">
           Applicants{job ? ` — ${job.title}` : ""}
         </h1>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
+            <button
+              type="button"
+              disabled={isBulkActing}
+              onClick={() => handleBulkStatusChange("SHORTLISTED")}
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
+            >
+              Shortlist Selected
+            </button>
+            <button
+              type="button"
+              disabled={isBulkActing}
+              onClick={() => setIsPendingBulkReject(true)}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              Reject Selected
+            </button>
+          </div>
+        )}
       </div>
       <p className="mt-1 text-sm text-slate-500">
         Sorted by ATS match rating (highest first). Ratings are a simple skills/experience match score, not a
@@ -235,10 +301,20 @@ export function ApplicantsPage() {
           <EmptyState title="No applicants match this view" description="Try clearing your filters." />
         ) : (
           <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm text-slate-500">
+              <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} />
+              Select all on this page
+            </label>
             {applicants.map((application) => (
               <div key={application.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selectedIds.has(application.id)}
+                    onChange={() => toggleSelected(application.id)}
+                  />
+                  <div className="flex-1">
                     <Link
                       to={`/hr/candidates/${application.candidate.id}`}
                       className="font-medium text-indigo-600 hover:text-indigo-500"
@@ -313,6 +389,16 @@ export function ApplicantsPage() {
         onConfirm={confirmRejection}
         onCancel={() => setPendingRejection(null)}
         isBusy={updatingId === pendingRejection?.id}
+      />
+
+      <ConfirmDialog
+        open={isPendingBulkReject}
+        title={`Reject ${selectedIds.size} applicant${selectedIds.size === 1 ? "" : "s"}?`}
+        description="They'll be marked as rejected. You can still reconsider any of them later."
+        confirmLabel="Reject Selected"
+        onConfirm={confirmBulkReject}
+        onCancel={() => setIsPendingBulkReject(false)}
+        isBusy={isBulkActing}
       />
     </div>
   );

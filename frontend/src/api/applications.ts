@@ -18,3 +18,8 @@ export const updateApplicationStatus = (applicationId: string, status: "SHORTLIS
   apiClient
     .patch<Application>(`/applications/${applicationId}/status`, { status })
     .then((res) => res.data);
+
+export const bulkUpdateApplicationStatus = (applicationIds: string[], status: "SHORTLISTED" | "REJECTED") =>
+  apiClient
+    .patch<{ updated_count: number }>("/applications/bulk-status", { application_ids: applicationIds, status })
+    .then((res) => res.data);
