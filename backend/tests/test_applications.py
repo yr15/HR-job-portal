@@ -90,6 +90,37 @@ def test_candidate_sees_only_own_applications(client, db_session):
     assert body["items"][0]["job"]["title"] == job.title
 
 
+def test_candidate_filters_own_applications_by_job_id(client, db_session):
+    hr_user = create_hr(db_session, email="hr-jobidfilter@test.com")
+    candidate = create_candidate(db_session, email="cand-jobidfilter@test.com")
+    job1 = create_job(db_session, hr_user=hr_user, title="Job One")
+    job2 = create_job(db_session, hr_user=hr_user, title="Job Two")
+    create_application(db_session, job=job1, candidate_user=candidate)
+    create_application(db_session, job=job2, candidate_user=candidate)
+
+    response = client.get(
+        "/api/v1/applications/me", params={"job_id": str(job1.id)}, headers=auth_header(candidate)
+    )
+
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["job"]["id"] == str(job1.id)
+
+
+def test_candidate_filters_own_applications_by_job_id_no_match(client, db_session):
+    hr_user = create_hr(db_session, email="hr-jobidnomatch@test.com")
+    candidate = create_candidate(db_session, email="cand-jobidnomatch@test.com")
+    job1 = create_job(db_session, hr_user=hr_user, title="Applied Job")
+    job2 = create_job(db_session, hr_user=hr_user, title="Never Applied Job")
+    create_application(db_session, job=job1, candidate_user=candidate)
+
+    response = client.get(
+        "/api/v1/applications/me", params={"job_id": str(job2.id)}, headers=auth_header(candidate)
+    )
+
+    assert response.json()["total"] == 0
+
+
 def test_candidate_filters_own_applications_by_status(client, db_session):
     hr_user = create_hr(db_session, email="hr-filterapps@test.com")
     candidate = create_candidate(db_session, email="cand-filterapps@test.com")

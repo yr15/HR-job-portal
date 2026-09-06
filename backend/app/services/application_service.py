@@ -49,11 +49,19 @@ def apply_to_job(db: Session, candidate_user: User, job_id: uuid.UUID, payload: 
 
 
 def list_my_applications(
-    db: Session, candidate_user: User, *, status: ApplicationStatus | None, page: int, page_size: int
+    db: Session,
+    candidate_user: User,
+    *,
+    status: ApplicationStatus | None,
+    job_id: uuid.UUID | None = None,
+    page: int,
+    page_size: int,
 ) -> tuple[list[Application], int]:
     query = _application_query(db).filter(Application.candidate_id == candidate_user.id)
     if status is not None:
         query = query.filter(Application.status == status)
+    if job_id is not None:
+        query = query.filter(Application.job_id == job_id)
 
     total = query.order_by(None).count()
     items = (

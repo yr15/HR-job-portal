@@ -22,11 +22,12 @@ def my_applications(
     db: Session = Depends(get_db),
     candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
     status_filter: ApplicationStatus | None = Query(default=None, alias="status"),
+    job_id: uuid.UUID | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
 ) -> Page[ApplicationOut]:
     items, total = list_my_applications(
-        db, candidate_user, status=status_filter, page=page, page_size=page_size
+        db, candidate_user, status=status_filter, job_id=job_id, page=page, page_size=page_size
     )
     return Page(items=items, total=total, page=page, page_size=page_size)
 
