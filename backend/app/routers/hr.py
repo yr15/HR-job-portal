@@ -5,12 +5,29 @@ from app.core.deps import require_role
 from app.db.session import get_db
 from app.models import User, UserRole
 from app.schemas.dashboard import DashboardStatsOut
+from app.schemas.hr import HRProfileUpdateRequest
 from app.schemas.job import JobOut
 from app.schemas.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
+from app.schemas.user import UserOut
 from app.services.dashboard_service import get_hr_dashboard_stats
+from app.services.hr_service import update_own_hr_profile
 from app.services.job_service import list_hr_jobs
 
 router = APIRouter(prefix="/hr", tags=["hr"])
+
+
+@router.get("/me", response_model=UserOut)
+def get_my_profile(hr_user: User = Depends(require_role(UserRole.HR))) -> User:
+    return hr_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_my_profile(
+    payload: HRProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    hr_user: User = Depends(require_role(UserRole.HR)),
+) -> User:
+    return update_own_hr_profile(db, hr_user, payload)
 
 
 @router.get("/jobs", response_model=Page[JobOut])
