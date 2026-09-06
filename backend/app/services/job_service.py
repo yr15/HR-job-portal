@@ -25,7 +25,7 @@ def create_job(db: Session, hr_user: User, payload: JobCreateRequest) -> Job:
     return job
 
 
-def _get_owned_job(db: Session, job_id: uuid.UUID, hr_user: User) -> Job:
+def get_owned_job(db: Session, job_id: uuid.UUID, hr_user: User) -> Job:
     job = _job_query(db).filter(Job.id == job_id).first()
     if job is None:
         raise NotFoundError("Job not found")
@@ -35,7 +35,7 @@ def _get_owned_job(db: Session, job_id: uuid.UUID, hr_user: User) -> Job:
 
 
 def update_job(db: Session, job_id: uuid.UUID, hr_user: User, payload: JobUpdateRequest) -> Job:
-    job = _get_owned_job(db, job_id, hr_user)
+    job = get_owned_job(db, job_id, hr_user)
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(job, field, value)
@@ -56,7 +56,7 @@ def update_job(db: Session, job_id: uuid.UUID, hr_user: User, payload: JobUpdate
 
 
 def set_job_status(db: Session, job_id: uuid.UUID, hr_user: User, is_active: bool) -> Job:
-    job = _get_owned_job(db, job_id, hr_user)
+    job = get_owned_job(db, job_id, hr_user)
     job.is_active = is_active
     db.commit()
     db.refresh(job)

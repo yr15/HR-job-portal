@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_optional, require_role
 from app.db.session import get_db
-from app.models import EmploymentType, Job, User, UserRole
+from app.models import Application, ApplicationStatus, EmploymentType, Job, User, UserRole
+from app.schemas.application import ApplicationOut, ApplyRequest
 from app.schemas.job import JobCreateRequest, JobOut, JobStatusUpdateRequest, JobUpdateRequest
 from app.schemas.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
+from app.services.application_service import apply_to_job, list_job_applicants
 from app.services.job_service import (
     create_job,
     get_job_detail,
@@ -79,3 +81,29 @@ def update_status(
     hr_user: User = Depends(require_role(UserRole.HR)),
 ) -> Job:
     return set_job_status(db, job_id, hr_user, payload.is_active)
+
+
+@router.post("/{job_id}/apply", response_model=ApplicationOut, status_code=status.HTTP_201_CREATED)
+def apply(
+    job_id: uuid.UUID,
+    payload: ApplyRequest,
+    db: Session = Depends(get_db),
+    candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
+) -> Application:
+    return apply_to_job(db, candidate_user, job_id, payload)
+
+
+@router.get("/{job_id}/applications", response_model=Page[ApplicationOut])
+def applicants(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    hr_user: User = Depends(require_role(UserRole.HR)),
+    status_filter: ApplicationStatus | None = Query(default=None, alias="status"),
+    q: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+) -> Page[ApplicationOut]:
+    items, total = list_job_applicants(
+        db, hr_user, job_id, status=status_filter, q=q, page=page, page_size=page_size
+    )
+    return Page(items=items, total=total, page=page, page_size=page_size)
