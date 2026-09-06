@@ -14,7 +14,7 @@ class CandidateProfileOut(BaseModel):
     total_experience_years: float | None
     skills: list[str]
     location: str | None
-    resume_url: str | None
+    resume_filename: str | None
 
 
 class HRProfileOut(BaseModel):

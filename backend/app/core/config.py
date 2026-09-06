@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
     frontend_origin: str = "http://localhost:3000"
     seed_demo_data: bool = True
+    upload_dir: str = "/app/uploads"
 
 
 settings = Settings()

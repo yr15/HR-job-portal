@@ -9,7 +9,6 @@ class CandidateProfileUpdateRequest(BaseModel):
     total_experience_years: float | None = Field(default=None, ge=0, le=60)
     skills: list[str] | None = None
     location: str | None = Field(default=None, max_length=255)
-    resume_url: str | None = Field(default=None, max_length=500)
 
     @field_validator("skills")
     @classmethod

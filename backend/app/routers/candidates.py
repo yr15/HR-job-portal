@@ -1,16 +1,23 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_role
+from app.core.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models import User, UserRole
 from app.schemas.candidate import CandidateListItemOut, CandidateProfileUpdateRequest
 from app.schemas.dashboard import CandidateStatsOut
 from app.schemas.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.user import UserOut
-from app.services.candidate_service import get_candidate_detail, search_candidates, update_own_profile
+from app.services.candidate_service import (
+    get_candidate_detail,
+    get_resume_file,
+    search_candidates,
+    update_own_profile,
+    upload_resume,
+)
 from app.services.dashboard_service import get_candidate_stats
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
@@ -36,6 +43,15 @@ def get_my_stats(
     candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
 ) -> CandidateStatsOut:
     return get_candidate_stats(db, candidate_user)
+
+
+@router.post("/me/resume", response_model=UserOut)
+async def upload_my_resume(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
+) -> User:
+    return await upload_resume(db, candidate_user, file)
 
 
 @router.get("", response_model=Page[CandidateListItemOut])
@@ -70,3 +86,15 @@ def get_detail(
     _hr_user: User = Depends(require_role(UserRole.HR)),
 ) -> User:
     return get_candidate_detail(db, candidate_id)
+
+
+@router.get("/{candidate_id}/resume")
+def download_resume(
+    candidate_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    path, filename = get_resume_file(db, current_user, candidate_id)
+    return FileResponse(
+        path, media_type="application/pdf", filename=filename, content_disposition_type="inline"
+    )

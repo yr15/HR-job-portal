@@ -24,6 +24,6 @@ class CandidateProfile(Base, TimestampMixin):
         ARRAY(String), default=list, server_default="{}", nullable=False
     )
     location: Mapped[str | None] = mapped_column(String(255), index=True)
-    resume_url: Mapped[str | None] = mapped_column(String(500))
+    resume_filename: Mapped[str | None] = mapped_column(String(255))
 
     user: Mapped["User"] = relationship(back_populates="candidate_profile")
