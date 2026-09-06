@@ -5,15 +5,14 @@ import { getDashboardStats } from "../../api/dashboard";
 import { getErrorMessage } from "../../api/client";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { StatusBreakdownChart } from "../../components/charts/StatusBreakdownChart";
+import { TrendLineChart } from "../../components/charts/TrendLineChart";
 import type { DashboardStats } from "../../types";
 
 const STAT_CARDS: { key: keyof DashboardStats; label: string; accent: string }[] = [
   { key: "total_jobs", label: "Total Jobs", accent: "text-slate-900" },
   { key: "active_jobs", label: "Active Jobs", accent: "text-emerald-600" },
   { key: "total_applications", label: "Total Applications", accent: "text-slate-900" },
-  { key: "applied_count", label: "Applied", accent: "text-blue-600" },
-  { key: "shortlisted_count", label: "Shortlisted", accent: "text-emerald-600" },
-  { key: "rejected_count", label: "Rejected", accent: "text-red-600" },
 ];
 
 export function HRDashboardPage() {
@@ -52,14 +51,39 @@ export function HRDashboardPage() {
       ) : error ? (
         <ErrorBanner message={error} />
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {STAT_CARDS.map((card) => (
-            <div key={card.key} className="rounded-lg border border-slate-200 bg-white p-4 text-center shadow-sm">
-              <p className={`text-2xl font-bold ${card.accent}`}>{stats?.[card.key] ?? 0}</p>
-              <p className="mt-1 text-sm text-slate-500">{card.label}</p>
+        stats && (
+          <>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {STAT_CARDS.map((card) => (
+                <div key={card.key} className="rounded-lg border border-slate-200 bg-white p-4 text-center shadow-sm">
+                  <p className={`text-2xl font-bold ${card.accent}`}>{stats[card.key] as number}</p>
+                  <p className="mt-1 text-sm text-slate-500">{card.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-medium text-slate-700">Applications by status</h2>
+                <div className="mt-4">
+                  <StatusBreakdownChart
+                    data={[
+                      { label: "Applied", value: stats.applied_count, colorRole: "neutral" },
+                      { label: "Shortlisted", value: stats.shortlisted_count, colorRole: "good" },
+                      { label: "Rejected", value: stats.rejected_count, colorRole: "critical" },
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-medium text-slate-700">Applications received — last 14 days</h2>
+                <div className="mt-4">
+                  <TrendLineChart data={stats.applications_by_day} />
+                </div>
+              </div>
+            </div>
+          </>
+        )
       )}
 
       <div className="mt-8 flex gap-4">

@@ -7,13 +7,8 @@ import { getErrorMessage } from "../../api/client";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { EmptyState } from "../../components/EmptyState";
+import { StatusBreakdownChart } from "../../components/charts/StatusBreakdownChart";
 import type { CandidateStats, Job } from "../../types";
-
-const STAT_CARDS: { key: keyof CandidateStats; label: string; accent: string }[] = [
-  { key: "applied_count", label: "Applied", accent: "text-blue-600" },
-  { key: "shortlisted_count", label: "Shortlisted", accent: "text-emerald-600" },
-  { key: "rejected_count", label: "Rejected", accent: "text-red-600" },
-];
 
 export function CandidateDashboardPage() {
   const { user } = useAuth();
@@ -46,13 +41,23 @@ export function CandidateDashboardPage() {
         <ErrorBanner message={error} />
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-3 gap-4">
-            {STAT_CARDS.map((card) => (
-              <div key={card.key} className="rounded-lg border border-slate-200 bg-white p-4 text-center shadow-sm">
-                <p className={`text-2xl font-bold ${card.accent}`}>{stats?.[card.key] ?? 0}</p>
-                <p className="mt-1 text-sm text-slate-500">{card.label}</p>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-white p-4 text-center shadow-sm">
+              <p className="text-2xl font-bold text-slate-900">{stats?.total_applications ?? 0}</p>
+              <p className="mt-1 text-sm text-slate-500">Total Applications</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-medium text-slate-700">Applications by status</h2>
+              <div className="mt-2">
+                <StatusBreakdownChart
+                  data={[
+                    { label: "Applied", value: stats?.applied_count ?? 0, colorRole: "neutral" },
+                    { label: "Shortlisted", value: stats?.shortlisted_count ?? 0, colorRole: "good" },
+                    { label: "Rejected", value: stats?.rejected_count ?? 0, colorRole: "critical" },
+                  ]}
+                />
               </div>
-            ))}
+            </div>
           </div>
 
           <div className="mt-8">
