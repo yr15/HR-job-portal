@@ -16,6 +16,7 @@ const HR_LINKS = [
   { to: "/hr/jobs", label: "My Jobs" },
   { to: "/hr/jobs/new", label: "Post a Job" },
   { to: "/hr/candidates", label: "Candidates" },
+  { to: "/hr/profile", label: "Profile" },
 ];
 
 export function Layout() {

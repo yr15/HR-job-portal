@@ -19,6 +19,7 @@ import { EditJobPage } from "./pages/hr/EditJobPage";
 import { ApplicantsPage } from "./pages/hr/ApplicantsPage";
 import { CandidateDirectoryPage } from "./pages/hr/CandidateDirectoryPage";
 import { CandidateDetailPage } from "./pages/hr/CandidateDetailPage";
+import { HRProfilePage } from "./pages/hr/HRProfilePage";
 
 function RootRedirect() {
   const { user, isLoading } = useAuth();
@@ -73,6 +74,7 @@ function App() {
           <Route path="/hr/jobs/:jobId/applicants" element={<ApplicantsPage />} />
           <Route path="/hr/candidates" element={<CandidateDirectoryPage />} />
           <Route path="/hr/candidates/:candidateId" element={<CandidateDetailPage />} />
+          <Route path="/hr/profile" element={<HRProfilePage />} />
         </Route>
       </Route>
 
