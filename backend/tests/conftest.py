@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import psycopg2
 
@@ -14,6 +15,7 @@ os.environ.setdefault(
     f"postgresql+psycopg2://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:{TEST_DB_PORT}/{TEST_DB_NAME}",
 )
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("UPLOAD_DIR", tempfile.mkdtemp(prefix="hirehub-test-uploads-"))
 
 
 def _ensure_test_database_exists() -> None:
