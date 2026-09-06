@@ -8,12 +8,14 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { Pagination } from "../../components/Pagination";
 import { StatusBadge } from "../../components/StatusBadge";
+import { StarRating } from "../../components/StarRating";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { inputClass } from "../../components/FormField";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Application, ApplicationStatus, Job } from "../../types";
 
 const STATUS_OPTIONS: ApplicationStatus[] = ["APPLIED", "SHORTLISTED", "REJECTED"];
+const RATING_OPTIONS = [5, 4, 3, 2, 1];
 
 export function ApplicantsPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -22,13 +24,23 @@ export function ApplicantsPage() {
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ApplicationStatus | "">("");
+  const [minExperience, setMinExperience] = useState("");
+  const [maxExperience, setMaxExperience] = useState("");
+  const [skillsText, setSkillsText] = useState("");
+  const [location, setLocation] = useState("");
+  const [selectedRatings, setSelectedRatings] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
   const pageSize = 10;
+
   const debouncedQ = useDebouncedValue(q);
+  const debouncedMinExperience = useDebouncedValue(minExperience);
+  const debouncedMaxExperience = useDebouncedValue(maxExperience);
+  const debouncedSkillsText = useDebouncedValue(skillsText);
+  const debouncedLocation = useDebouncedValue(location);
 
   useEffect(() => {
     if (!jobId) return;
@@ -39,7 +51,22 @@ export function ApplicantsPage() {
     if (!jobId) return;
     setIsLoading(true);
     setError(null);
-    getJobApplicants(jobId, { q: debouncedQ || undefined, status: status || undefined, page, page_size: pageSize })
+    const skills = debouncedSkillsText
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+
+    getJobApplicants(jobId, {
+      q: debouncedQ || undefined,
+      status: status || undefined,
+      min_experience: debouncedMinExperience ? Number(debouncedMinExperience) : undefined,
+      max_experience: debouncedMaxExperience ? Number(debouncedMaxExperience) : undefined,
+      skills: skills.length > 0 ? skills : undefined,
+      location: debouncedLocation || undefined,
+      ratings: selectedRatings.size > 0 ? Array.from(selectedRatings) : undefined,
+      page,
+      page_size: pageSize,
+    })
       .then((data) => {
         setApplicants(data.items);
         setTotal(data.total);
@@ -48,7 +75,31 @@ export function ApplicantsPage() {
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(load, [jobId, debouncedQ, status, page]);
+  useEffect(
+    load,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      jobId,
+      debouncedQ,
+      status,
+      debouncedMinExperience,
+      debouncedMaxExperience,
+      debouncedSkillsText,
+      debouncedLocation,
+      selectedRatings,
+      page,
+    ],
+  );
+
+  const toggleRating = (rating: number) => {
+    setSelectedRatings((prev) => {
+      const next = new Set(prev);
+      if (next.has(rating)) next.delete(rating);
+      else next.add(rating);
+      return next;
+    });
+    setPage(1);
+  };
 
   const handleStatusChange = async (applicationId: string, newStatus: "SHORTLISTED" | "REJECTED") => {
     setUpdatingId(applicationId);
@@ -78,32 +129,99 @@ export function ApplicantsPage() {
           Applicants{job ? ` — ${job.title}` : ""}
         </h1>
       </div>
+      <p className="mt-1 text-sm text-slate-500">
+        Sorted by ATS match rating (highest first). Ratings are a simple skills/experience match score, not a
+        judgment of the candidate.
+      </p>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <input
-          className={inputClass}
-          placeholder="Search by name or skill"
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
-        />
-        <select
-          className={`${inputClass} sm:w-48`}
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as ApplicationStatus | "");
-            setPage(1);
-          }}
-        >
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
+      <div className="mt-4 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            className={inputClass}
+            placeholder="Search by name or skill"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+          <select
+            className={`${inputClass} sm:w-48`}
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as ApplicationStatus | "");
+              setPage(1);
+            }}
+          >
+            <option value="">All statuses</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <input
+            className={inputClass}
+            type="number"
+            min={0}
+            max={60}
+            step={0.5}
+            placeholder="Min experience (yrs)"
+            value={minExperience}
+            onChange={(e) => {
+              setMinExperience(e.target.value);
+              setPage(1);
+            }}
+          />
+          <input
+            className={inputClass}
+            type="number"
+            min={0}
+            max={60}
+            step={0.5}
+            placeholder="Max experience (yrs)"
+            value={maxExperience}
+            onChange={(e) => {
+              setMaxExperience(e.target.value);
+              setPage(1);
+            }}
+          />
+          <input
+            className={inputClass}
+            placeholder="Skills (comma-separated)"
+            value={skillsText}
+            onChange={(e) => {
+              setSkillsText(e.target.value);
+              setPage(1);
+            }}
+          />
+          <input
+            className={inputClass}
+            placeholder="Location"
+            value={location}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-slate-500">Rating:</span>
+          {RATING_OPTIONS.map((rating) => (
+            <label key={rating} className="flex items-center gap-1.5 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={selectedRatings.has(rating)}
+                onChange={() => toggleRating(rating)}
+              />
+              <StarRating rating={rating} />
+            </label>
           ))}
-        </select>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -134,6 +252,9 @@ export function ApplicantsPage() {
                       {application.candidate.candidate_profile?.location &&
                         ` · ${application.candidate.candidate_profile.location}`}
                     </p>
+                    <div className="mt-1">
+                      <StarRating rating={application.ats_rating} score={application.ats_score} />
+                    </div>
                     {application.candidate.candidate_profile && application.candidate.candidate_profile.skills.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {application.candidate.candidate_profile.skills.slice(0, 6).map((skill) => (

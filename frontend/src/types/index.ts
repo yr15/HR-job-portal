@@ -52,6 +52,8 @@ export interface Application {
   cover_note: string | null;
   applied_at: string;
   updated_at: string;
+  ats_score: number;
+  ats_rating: number;
   job: Job;
   candidate: User;
 }
@@ -72,6 +74,11 @@ export interface Page<T> {
   page_size: number;
 }
 
+export interface ApplicationsByDay {
+  date: string;
+  count: number;
+}
+
 export interface DashboardStats {
   total_jobs: number;
   active_jobs: number;
@@ -79,6 +86,7 @@ export interface DashboardStats {
   applied_count: number;
   shortlisted_count: number;
   rejected_count: number;
+  applications_by_day: ApplicationsByDay[];
 }
 
 export interface CandidateStats {

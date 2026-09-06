@@ -48,6 +48,11 @@ export const applyToJob = (jobId: string, coverNote?: string) =>
 export interface ApplicantSearchParams {
   status?: string;
   q?: string;
+  min_experience?: number;
+  max_experience?: number;
+  skills?: string[];
+  location?: string;
+  ratings?: number[];
   page?: number;
   page_size?: number;
 }
