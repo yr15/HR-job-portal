@@ -12,6 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
+from app.core.security import create_access_token
 from app.db.session import Base, get_db
 from app.main import app
 
@@ -48,3 +49,8 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+def auth_header(user) -> dict[str, str]:
+    token = create_access_token(subject=str(user.id))
+    return {"Authorization": f"Bearer {token}"}
