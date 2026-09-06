@@ -7,6 +7,7 @@ already-seeded database (e.g. `docker compose up` without `-v`) is a no-op.
 import logging
 
 from app.core.security import hash_password
+from app.core.storage import resume_path_for
 from app.db.session import SessionLocal
 from app.models import (
     Application,
@@ -15,9 +16,15 @@ from app.models import (
     EmploymentType,
     HRProfile,
     Job,
+    Message,
     User,
     UserRole,
 )
+
+# A minimal-but-valid PDF, written directly to disk (bypassing the upload endpoint's
+# multipart/content-type validation, which only applies to actual HTTP uploads) so the
+# demo candidate has a real resume to view out of the box, not just an empty state.
+DEMO_RESUME_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>"
 
 logger = logging.getLogger(__name__)
 
@@ -126,14 +133,14 @@ def _create_hr(db, *, email, password, full_name, company_name, designation) -> 
         full_name=full_name,
         role=UserRole.HR,
     )
+    user.hr_profile = HRProfile(company_name=company_name, designation=designation)
     db.add(user)
     db.flush()
-    db.add(HRProfile(user_id=user.id, company_name=company_name, designation=designation))
     return user
 
 
 def _create_candidate(
-    db, *, email, password, full_name, headline, experience_years, skills, location, phone, resume_url
+    db, *, email, password, full_name, headline, experience_years, skills, location, phone
 ) -> User:
     user = User(
         email=email,
@@ -141,19 +148,15 @@ def _create_candidate(
         full_name=full_name,
         role=UserRole.CANDIDATE,
     )
+    user.candidate_profile = CandidateProfile(
+        headline=headline,
+        total_experience_years=experience_years,
+        skills=skills,
+        location=location,
+        phone=phone,
+    )
     db.add(user)
     db.flush()
-    db.add(
-        CandidateProfile(
-            user_id=user.id,
-            headline=headline,
-            total_experience_years=experience_years,
-            skills=skills,
-            location=location,
-            phone=phone,
-            resume_url=resume_url,
-        )
-    )
     return user
 
 
@@ -189,8 +192,10 @@ def seed(db) -> None:
         skills=["Python", "FastAPI", "PostgreSQL", "Docker"],
         location="Bangalore",
         phone="+91-9000000001",
-        resume_url="https://drive.google.com/file/d/example-priya-resume/view",
     )
+    resume_path_for(candidate1.id).write_bytes(DEMO_RESUME_PDF)
+    candidate1.candidate_profile.resume_filename = "priya-nair-resume.pdf"
+
     candidate2 = _create_candidate(
         db,
         email="candidate2@test.com",
@@ -201,7 +206,6 @@ def seed(db) -> None:
         skills=["React", "TypeScript", "CSS", "JavaScript"],
         location="Pune",
         phone="+91-9000000002",
-        resume_url=None,
     )
 
     job1 = Job(
@@ -307,6 +311,18 @@ def seed(db) -> None:
         ]
     )
 
+    db.add(
+        Message(
+            sender_hr_id=hr1.id,
+            recipient_candidate_id=candidate1.id,
+            subject="You've been shortlisted!",
+            body=(
+                "Hi Priya, great news — we've shortlisted you for the Backend Engineer "
+                "role. Our team will reach out shortly to schedule a call."
+            ),
+        )
+    )
+
     for i, (full_name, headline, experience_years, skills, location) in enumerate(BULK_CANDIDATES, start=3):
         _create_candidate(
             db,
@@ -318,7 +334,6 @@ def seed(db) -> None:
             skills=skills,
             location=location,
             phone=f"+91-90000000{i:02d}",
-            resume_url=None,
         )
 
     bulk_jobs = [
