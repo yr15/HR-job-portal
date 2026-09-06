@@ -185,6 +185,126 @@ def test_hr_filters_applicants_by_candidate_name(client, db_session):
     assert body["items"][0]["candidate"]["full_name"] == "Alice Applicant"
 
 
+def test_applicants_sorted_by_ats_rating_descending(client, db_session):
+    hr_user = create_hr(db_session, email="hr-atssort@test.com")
+    job = create_job(
+        db_session,
+        hr_user=hr_user,
+        title="Backend Engineer",
+        description="Build APIs with Python and FastAPI.",
+        skills=["Python", "FastAPI"],
+        min_experience_years=1,
+        max_experience_years=5,
+    )
+    strong_match = create_candidate(
+        db_session,
+        email="cand-strongmatch@test.com",
+        full_name="Strong Match",
+        skills=["Python", "FastAPI"],
+        total_experience_years=2,
+    )
+    weak_match = create_candidate(
+        db_session,
+        email="cand-weakmatch@test.com",
+        full_name="Weak Match",
+        skills=["Ruby", "Rails"],
+        total_experience_years=2,
+    )
+    create_application(db_session, job=job, candidate_user=weak_match)
+    create_application(db_session, job=job, candidate_user=strong_match)
+
+    response = client.get(f"/api/v1/jobs/{job.id}/applications", headers=auth_header(hr_user))
+
+    names = [item["candidate"]["full_name"] for item in response.json()["items"]]
+    assert names == ["Strong Match", "Weak Match"]
+
+
+def test_applicants_filtered_by_rating(client, db_session):
+    hr_user = create_hr(db_session, email="hr-ratingfilter@test.com")
+    job = create_job(
+        db_session,
+        hr_user=hr_user,
+        title="Backend Engineer",
+        description="Build APIs with Python and FastAPI.",
+        skills=["Python", "FastAPI"],
+        min_experience_years=1,
+        max_experience_years=5,
+    )
+    strong_match = create_candidate(
+        db_session,
+        email="cand-ratinghigh@test.com",
+        full_name="High Rating",
+        skills=["Python", "FastAPI"],
+        total_experience_years=2,
+    )
+    weak_match = create_candidate(
+        db_session,
+        email="cand-ratinglow@test.com",
+        full_name="Low Rating",
+        skills=["Ruby", "Rails"],
+        total_experience_years=2,
+    )
+    create_application(db_session, job=job, candidate_user=strong_match)
+    create_application(db_session, job=job, candidate_user=weak_match)
+
+    all_applicants = client.get(f"/api/v1/jobs/{job.id}/applications", headers=auth_header(hr_user)).json()
+    high_rating = all_applicants["items"][0]["ats_rating"]
+
+    response = client.get(
+        f"/api/v1/jobs/{job.id}/applications",
+        params={"ratings": high_rating},
+        headers=auth_header(hr_user),
+    )
+
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["candidate"]["full_name"] == "High Rating"
+
+
+def test_applicants_filtered_by_experience_range(client, db_session):
+    hr_user = create_hr(db_session, email="hr-expfilter@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    junior = create_candidate(
+        db_session, email="cand-expjunior@test.com", full_name="Junior", total_experience_years=1
+    )
+    senior = create_candidate(
+        db_session, email="cand-expsenior@test.com", full_name="Senior", total_experience_years=8
+    )
+    create_application(db_session, job=job, candidate_user=junior)
+    create_application(db_session, job=job, candidate_user=senior)
+
+    response = client.get(
+        f"/api/v1/jobs/{job.id}/applications",
+        params={"min_experience": 5, "max_experience": 10},
+        headers=auth_header(hr_user),
+    )
+
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["candidate"]["full_name"] == "Senior"
+
+
+def test_applicants_filtered_by_location(client, db_session):
+    hr_user = create_hr(db_session, email="hr-locfilter@test.com")
+    job = create_job(db_session, hr_user=hr_user)
+    bangalore = create_candidate(
+        db_session, email="cand-bangalore@test.com", full_name="Bangalore Candidate", location="Bangalore"
+    )
+    pune = create_candidate(
+        db_session, email="cand-pune@test.com", full_name="Pune Candidate", location="Pune"
+    )
+    create_application(db_session, job=job, candidate_user=bangalore)
+    create_application(db_session, job=job, candidate_user=pune)
+
+    response = client.get(
+        f"/api/v1/jobs/{job.id}/applications", params={"location": "Bangalore"}, headers=auth_header(hr_user)
+    )
+
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["candidate"]["full_name"] == "Bangalore Candidate"
+
+
 def test_hr_cannot_see_applicants_for_another_hrs_job(client, db_session):
     owner = create_hr(db_session, email="hr-appowner@test.com")
     other = create_hr(db_session, email="hr-appother@test.com", company_name="Other Co")

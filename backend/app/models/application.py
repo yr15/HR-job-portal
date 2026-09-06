@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.ats import compute_ats_score, score_to_stars
 from app.db.session import Base
 from app.models.enums import ApplicationStatus
 
@@ -40,3 +41,11 @@ class Application(Base):
 
     job: Mapped["Job"] = relationship(back_populates="applications")
     candidate: Mapped["User"] = relationship(back_populates="applications")
+
+    @property
+    def ats_score(self) -> float:
+        return compute_ats_score(self.job, self.candidate.candidate_profile)
+
+    @property
+    def ats_rating(self) -> int:
+        return score_to_stars(self.ats_score)

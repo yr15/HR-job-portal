@@ -100,10 +100,26 @@ def applicants(
     hr_user: User = Depends(require_role(UserRole.HR)),
     status_filter: ApplicationStatus | None = Query(default=None, alias="status"),
     q: str | None = None,
+    min_experience: float | None = Query(default=None, ge=0, le=60),
+    max_experience: float | None = Query(default=None, ge=0, le=60),
+    skills: list[str] = Query(default=[]),
+    location: str | None = None,
+    ratings: list[int] = Query(default=[]),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
 ) -> Page[ApplicationOut]:
     items, total = list_job_applicants(
-        db, hr_user, job_id, status=status_filter, q=q, page=page, page_size=page_size
+        db,
+        hr_user,
+        job_id,
+        status=status_filter,
+        q=q,
+        min_experience=min_experience,
+        max_experience=max_experience,
+        skills=skills,
+        location=location,
+        ratings=ratings,
+        page=page,
+        page_size=page_size,
     )
     return Page(items=items, total=total, page=page, page_size=page_size)

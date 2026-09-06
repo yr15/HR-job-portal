@@ -33,5 +33,7 @@ class ApplicationOut(BaseModel):
     cover_note: str | None
     applied_at: datetime
     updated_at: datetime
+    ats_score: float
+    ats_rating: int
     job: JobOut
     candidate: UserOut

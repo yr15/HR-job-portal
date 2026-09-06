@@ -80,18 +80,25 @@ def list_job_applicants(
     *,
     status: ApplicationStatus | None,
     q: str | None,
+    min_experience: float | None = None,
+    max_experience: float | None = None,
+    skills: list[str] | None = None,
+    location: str | None = None,
+    ratings: list[int] | None = None,
     page: int,
     page_size: int,
 ) -> tuple[list[Application], int]:
     get_owned_job(db, job_id, hr_user)
 
-    query = _application_query(db).filter(Application.job_id == job_id)
+    query = (
+        _application_query(db)
+        .join(User, Application.candidate_id == User.id)
+        .join(CandidateProfile, CandidateProfile.user_id == User.id)
+        .filter(Application.job_id == job_id)
+    )
     if status is not None:
         query = query.filter(Application.status == status)
     if q:
-        query = query.join(User, Application.candidate_id == User.id).join(
-            CandidateProfile, CandidateProfile.user_id == User.id
-        )
         like = f"%{q}%"
         query = query.filter(
             or_(
@@ -99,14 +106,28 @@ def list_job_applicants(
                 func.array_to_string(CandidateProfile.skills, ",").ilike(like),
             )
         )
+    if min_experience is not None:
+        query = query.filter(CandidateProfile.total_experience_years >= min_experience)
+    if max_experience is not None:
+        query = query.filter(CandidateProfile.total_experience_years <= max_experience)
+    if location:
+        query = query.filter(CandidateProfile.location.ilike(f"%{location}%"))
+    if skills:
+        for skill in skills:
+            query = query.filter(func.array_to_string(CandidateProfile.skills, ",").ilike(f"%{skill}%"))
 
-    total = query.order_by(None).count()
-    items = (
-        query.order_by(Application.applied_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
+    # ats_rating is computed in Python (not a DB column), so filtering/sorting/
+    # pagination by rating has to happen here rather than at the SQL level —
+    # fine at this application's scale (applicants per job, not a global table).
+    all_matching = query.all()
+    if ratings:
+        rating_set = set(ratings)
+        all_matching = [a for a in all_matching if a.ats_rating in rating_set]
+
+    total = len(all_matching)
+    all_matching.sort(key=lambda a: (-a.ats_rating, -a.applied_at.timestamp()))
+    start = (page - 1) * page_size
+    items = all_matching[start : start + page_size]
     return items, total
 
 
