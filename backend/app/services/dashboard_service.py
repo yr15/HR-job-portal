@@ -2,7 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Application, ApplicationStatus, Job, User
-from app.schemas.dashboard import DashboardStatsOut
+from app.schemas.dashboard import CandidateStatsOut, DashboardStatsOut
 
 
 def get_hr_dashboard_stats(db: Session, hr_user: User) -> DashboardStatsOut:
@@ -26,6 +26,26 @@ def get_hr_dashboard_stats(db: Session, hr_user: User) -> DashboardStatsOut:
     return DashboardStatsOut(
         total_jobs=total_jobs,
         active_jobs=active_jobs,
+        total_applications=total_applications,
+        applied_count=applied_count,
+        shortlisted_count=shortlisted_count,
+        rejected_count=rejected_count,
+    )
+
+
+def get_candidate_stats(db: Session, candidate_user: User) -> CandidateStatsOut:
+    total_applications, applied_count, shortlisted_count, rejected_count = (
+        db.query(
+            func.count(Application.id),
+            func.count(Application.id).filter(Application.status == ApplicationStatus.APPLIED),
+            func.count(Application.id).filter(Application.status == ApplicationStatus.SHORTLISTED),
+            func.count(Application.id).filter(Application.status == ApplicationStatus.REJECTED),
+        )
+        .filter(Application.candidate_id == candidate_user.id)
+        .one()
+    )
+
+    return CandidateStatsOut(
         total_applications=total_applications,
         applied_count=applied_count,
         shortlisted_count=shortlisted_count,

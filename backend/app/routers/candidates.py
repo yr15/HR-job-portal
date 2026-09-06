@@ -7,9 +7,11 @@ from app.core.deps import require_role
 from app.db.session import get_db
 from app.models import User, UserRole
 from app.schemas.candidate import CandidateListItemOut, CandidateProfileUpdateRequest
+from app.schemas.dashboard import CandidateStatsOut
 from app.schemas.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.user import UserOut
 from app.services.candidate_service import get_candidate_detail, search_candidates, update_own_profile
+from app.services.dashboard_service import get_candidate_stats
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -26,6 +28,14 @@ def update_my_profile(
     candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
 ) -> User:
     return update_own_profile(db, candidate_user, payload)
+
+
+@router.get("/me/stats", response_model=CandidateStatsOut)
+def get_my_stats(
+    db: Session = Depends(get_db),
+    candidate_user: User = Depends(require_role(UserRole.CANDIDATE)),
+) -> CandidateStatsOut:
+    return get_candidate_stats(db, candidate_user)
 
 
 @router.get("", response_model=Page[CandidateListItemOut])

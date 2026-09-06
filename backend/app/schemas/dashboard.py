@@ -8,3 +8,10 @@ class DashboardStatsOut(BaseModel):
     applied_count: int
     shortlisted_count: int
     rejected_count: int
+
+
+class CandidateStatsOut(BaseModel):
+    total_applications: int
+    applied_count: int
+    shortlisted_count: int
+    rejected_count: int
