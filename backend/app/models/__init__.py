@@ -3,6 +3,7 @@ from app.models.candidate_profile import CandidateProfile
 from app.models.enums import ApplicationStatus, EmploymentType, UserRole
 from app.models.hr_profile import HRProfile
 from app.models.job import Job
+from app.models.message import Message
 from app.models.user import User
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     "EmploymentType",
     "HRProfile",
     "Job",
+    "Message",
     "User",
     "UserRole",
 ]
