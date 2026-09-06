@@ -6,6 +6,11 @@ export const getMyApplications = (status?: ApplicationStatus, page = 1, pageSize
     .get<Page<Application>>("/applications/me", { params: { status, page, page_size: pageSize } })
     .then((res) => res.data);
 
+export const getMyApplicationForJob = (jobId: string) =>
+  apiClient
+    .get<Page<Application>>("/applications/me", { params: { job_id: jobId, page_size: 1 } })
+    .then((res) => res.data.items[0] ?? null);
+
 export const getApplication = (applicationId: string) =>
   apiClient.get<Application>(`/applications/${applicationId}`).then((res) => res.data);
 

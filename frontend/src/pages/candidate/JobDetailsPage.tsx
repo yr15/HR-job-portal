@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { applyToJob, getJob } from "../../api/jobs";
-import { getMyApplications } from "../../api/applications";
+import { getMyApplicationForJob } from "../../api/applications";
 import { getErrorMessage } from "../../api/client";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBanner } from "../../components/ErrorBanner";
@@ -32,10 +32,10 @@ export function JobDetailsPage() {
     if (!jobId) return;
     setIsLoading(true);
     setError(null);
-    Promise.all([getJob(jobId), getMyApplications(undefined, 1, 100)])
-      .then(([jobData, applications]) => {
+    Promise.all([getJob(jobId), getMyApplicationForJob(jobId)])
+      .then(([jobData, existingApplication]) => {
         setJob(jobData);
-        setHasApplied(applications.items.some((application) => application.job.id === jobId));
+        setHasApplied(existingApplication !== null);
       })
       .catch((err) => setError(getErrorMessage(err, "This job could not be found.")))
       .finally(() => setIsLoading(false));

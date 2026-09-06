@@ -81,6 +81,13 @@ export interface DashboardStats {
   rejected_count: number;
 }
 
+export interface CandidateStats {
+  total_applications: number;
+  applied_count: number;
+  shortlisted_count: number;
+  rejected_count: number;
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;
