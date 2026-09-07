@@ -1,7 +1,14 @@
 import os
 import tempfile
+from pathlib import Path
 
 import psycopg2
+from dotenv import load_dotenv
+
+# Load the project's real .env (not just .env.example's original defaults) so these
+# fallbacks track whatever credentials are actually configured — load_dotenv never
+# overrides a variable already set in the shell environment.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 TEST_DB_HOST = os.environ.get("TEST_DB_HOST", "localhost")
 TEST_DB_PORT = os.environ.get("TEST_DB_PORT", "5433")
@@ -10,12 +17,16 @@ TEST_DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "change_me")
 TEST_DB_NAME = os.environ.get("TEST_DB_NAME", "hirehub_test")
 ADMIN_DB_NAME = os.environ.get("POSTGRES_DB", "hirehub")
 
-os.environ.setdefault(
-    "DATABASE_URL",
-    f"postgresql+psycopg2://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:{TEST_DB_PORT}/{TEST_DB_NAME}",
+# Always the locally-derived test URL, never whatever DATABASE_URL load_dotenv
+# just pulled from the real .env — that one points at the Docker-internal "db"
+# host, which doesn't resolve outside the Docker network.
+os.environ["DATABASE_URL"] = (
+    f"postgresql+psycopg2://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:{TEST_DB_PORT}/{TEST_DB_NAME}"
 )
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
-os.environ.setdefault("UPLOAD_DIR", tempfile.mkdtemp(prefix="hirehub-test-uploads-"))
+# Same reasoning as DATABASE_URL above: the real .env's UPLOAD_DIR is a
+# Docker-internal path (e.g. /app/uploads) that doesn't exist on the host.
+os.environ["UPLOAD_DIR"] = tempfile.mkdtemp(prefix="hirehub-test-uploads-")
 
 
 def _ensure_test_database_exists() -> None:
